@@ -1,0 +1,99 @@
+@using OnlineCoursePlatform.Shared.DTOs
+
+<div class="lesson-item @GetLessonClass()" @onclick="OnLessonClick">
+    <div class="d-flex align-items-center">
+        <div class="me-3">
+            @if (Lesson.IsCompleted)
+            {
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+            }
+            else if (IsActive)
+            {
+                <i class="bi bi-play-circle-fill text-primary" style="font-size: 1.5rem;"></i>
+            }
+            else if (Lesson.IsFreePreview)
+            {
+                <i class="bi bi-unlock text-info" style="font-size: 1.5rem;"></i>
+            }
+            else if (IsLocked)
+            {
+                <i class="bi bi-lock text-muted" style="font-size: 1.5rem;"></i>
+            }
+            else
+            {
+                <i class="bi bi-circle text-muted" style="font-size: 1.5rem;"></i>
+            }
+        </div>
+        
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6 class="mb-1">
+                        @Lesson.Order. @Lesson.Title
+                        @if (Lesson.IsFreePreview)
+                        {
+                            <span class="badge bg-info ms-2">ตัวอย่างฟรี</span>
+                        }
+                    </h6>
+                    <small class="text-muted">
+                        @((MarkupString)GetLessonTypeIcon()) @Lesson.Type
+                        <span class="mx-2">•</span>
+                        <i class="bi bi-clock" aria-hidden="true"></i> <span>@Lesson.Duration</span>
+                    </small>
+                </div>
+                
+                @if (Lesson.HasQuiz)
+                {
+                    <span class="badge bg-warning text-dark">
+                        <i class="bi bi-question-circle me-1"></i>Quiz
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public LessonDto Lesson { get; set; } = new();
+
+    [Parameter]
+    public bool IsActive { get; set; }
+
+    [Parameter]
+    public bool IsLocked { get; set; }
+
+    [Parameter]
+    public EventCallback<LessonDto> OnSelect { get; set; }
+
+    private async Task OnLessonClick()
+    {
+        if (!IsLocked || Lesson.IsFreePreview)
+        {
+            await OnSelect.InvokeAsync(Lesson);
+        }
+    }
+
+    private string GetLessonClass()
+    {
+        var classes = new List<string>();
+        
+        if (Lesson.IsCompleted) classes.Add("completed");
+        if (IsActive) classes.Add("active");
+        if (IsLocked && !Lesson.IsFreePreview) classes.Add("opacity-50");
+        
+        return string.Join(" ", classes);
+    }
+
+    private string GetLessonTypeIcon()
+    {
+        return Lesson.Type?.ToLower() switch
+        {
+            "video" => "<i class=\"bi bi-play-btn\" aria-hidden=\"true\"></i>",
+            "article" => "<i class=\"bi bi-file-text\" aria-hidden=\"true\"></i>",
+            "quiz" => "<i class=\"bi bi-question-circle\" aria-hidden=\"true\"></i>",
+            "assignment" => "<i class=\"bi bi-clipboard-check\" aria-hidden=\"true\"></i>",
+            _ => "<i class=\"bi bi-file\" aria-hidden=\"true\"></i>"
+        };
+    }
+}

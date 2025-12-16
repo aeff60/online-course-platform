@@ -1,0 +1,109 @@
+@using OnlineCoursePlatform.Shared.DTOs
+
+@using Microsoft.AspNetCore.Components.Web
+<div class="card mb-3 shadow-sm" style="cursor: pointer;" @onclick="OnCardClick" tabindex="0" role="button" @onkeydown="HandleKey">
+    <div class="row g-0">
+        <div class="col-md-4">
+            @if (!string.IsNullOrEmpty(Enrollment.CourseImage))
+            {
+                <img src="@Enrollment.CourseImage" class="img-fluid rounded-start h-100" style="object-fit: cover;" alt="@Enrollment.CourseTitle" loading="lazy" />
+            }
+            else
+            {
+                <div class="bg-secondary d-flex align-items-center justify-content-center h-100 rounded-start">
+                    <i class="bi bi-book text-white" style="font-size: 2rem;"></i>
+                </div>
+            }
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <h5 class="card-title">@Enrollment.CourseTitle</h5>
+                <p class="card-text text-muted small mb-2">
+                    <i class="bi bi-person me-1"></i>@Enrollment.InstructorName
+                </p>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">ความคืบหน้า</small>
+                        <small class="text-primary fw-bold">@Enrollment.ProgressPercentage.ToString("0")%</small>
+                    </div>
+                    <div class="progress course-progress">
+                        <div class="progress-bar" role="progressbar" style="@($"width: {Enrollment.ProgressPercentage}%")" 
+                             aria-valuenow="@Enrollment.ProgressPercentage" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-check-circle me-1"></i>
+                        @Enrollment.CompletedLessons / @Enrollment.TotalLessons บทเรียน
+                    </small>
+                    
+                    @if (Enrollment.Status == "Completed")
+                    {
+                        <span class="badge bg-success">
+                            <i class="bi bi-trophy me-1"></i>เรียนจบแล้ว
+                        </span>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="OnContinueClick" @onclick:stopPropagation="true">
+                            <i class="bi bi-play-fill me-1"></i>เรียนต่อ
+                        </button>
+                    }
+                </div>
+                
+                @if (Enrollment.LastAccessedAt.HasValue)
+                {
+                    <small class="text-muted d-block mt-2">
+                        <i class="bi bi-clock-history me-1"></i>
+                        เข้าเรียนล่าสุด: @FormatLastAccessed(Enrollment.LastAccessedAt.Value)
+                    </small>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EnrollmentDto Enrollment { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<EnrollmentDto> OnContinue { get; set; }
+
+    [Parameter]
+    public EventCallback<EnrollmentDto> OnClick { get; set; }
+
+    private async Task OnContinueClick()
+    {
+        await OnContinue.InvokeAsync(Enrollment);
+    }
+
+    private async Task OnCardClick()
+    {
+        await OnClick.InvokeAsync(Enrollment);
+    }
+
+    private string FormatLastAccessed(DateTime lastAccessed)
+    {
+        var diff = DateTime.UtcNow - lastAccessed;
+        
+        if (diff.TotalMinutes < 60)
+            return $"{(int)diff.TotalMinutes} นาทีที่แล้ว";
+        if (diff.TotalHours < 24)
+            return $"{(int)diff.TotalHours} ชั่วโมงที่แล้ว";
+        if (diff.TotalDays < 7)
+            return $"{(int)diff.TotalDays} วันที่แล้ว";
+        
+        return lastAccessed.ToString("dd MMM yyyy");
+    }
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await OnCardClick();
+        }
+    }
+}

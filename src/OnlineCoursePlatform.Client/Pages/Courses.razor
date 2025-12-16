@@ -1,0 +1,264 @@
+@page "/courses"
+@page "/courses/{CategoryFilter}"
+@using OnlineCoursePlatform.Client.Components
+@using OnlineCoursePlatform.Client.Services
+@using OnlineCoursePlatform.Shared.DTOs
+@inject ICourseApiService CourseApi
+@inject NavigationManager Navigation
+
+<PageTitle>คอร์สทั้งหมด - Online Course Platform</PageTitle>
+
+<div class="container py-4">
+    <div class="row">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3 mb-4">
+            <div class="sidebar">
+                <h5 class="fw-bold mb-3">
+                    <i class="bi bi-funnel me-2"></i>ตัวกรอง
+                </h5>
+
+                <!-- Search -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">ค้นหา</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="ค้นหาคอร์ส..." 
+                               @bind="_filter.SearchTerm" @bind:event="oninput" />
+                        <button class="btn btn-primary" @onclick="SearchCourses">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">หมวดหมู่</label>
+                    <select class="form-select" value="@_filter.Category" @onchange="@(async (ChangeEventArgs e) => { _filter.Category = e.Value?.ToString(); _filter.PageNumber = 1; await LoadCourses(); })">
+                        <option value="">ทั้งหมด</option>
+                        @foreach (var category in _categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                    </div>
+
+                <!-- Level -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">ระดับ</label>
+                    <select class="form-select" value="@_filter.Level" @onchange="@(async (ChangeEventArgs e) => { _filter.Level = e.Value?.ToString(); _filter.PageNumber = 1; await LoadCourses(); })">
+                        <option value="">ทุกระดับ</option>
+                        <option value="Beginner">เริ่มต้น</option>
+                        <option value="Intermediate">ปานกลาง</option>
+                        <option value="Advanced">ขั้นสูง</option>
+                    </select>
+                </div>
+
+                <!-- Price -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">ราคา</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="priceFilter" id="priceAll"
+                               checked="@(!_filter.IsFree.HasValue)" @onchange="() => SetPriceFilter(null)" />
+                        <label class="form-check-label" for="priceAll">ทั้งหมด</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="priceFilter" id="priceFree"
+                               checked="@(_filter.IsFree == true)" @onchange="() => SetPriceFilter(true)" />
+                        <label class="form-check-label" for="priceFree">ฟรี</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="priceFilter" id="pricePaid"
+                               checked="@(_filter.IsFree == false)" @onchange="() => SetPriceFilter(false)" />
+                        <label class="form-check-label" for="pricePaid">มีค่าใช้จ่าย</label>
+                    </div>
+                </div>
+
+                <!-- Rating -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">คะแนนขั้นต่ำ</label>
+                    <select class="form-select" value="@_minRating" @onchange="@(async (ChangeEventArgs e) => { if (double.TryParse(e.Value?.ToString(), out var v)) { _minRating = v; } else { _minRating = 0; } await OnRatingChange(); })">
+                        <option value="0">ทั้งหมด</option>
+                        <option value="4.5">4.5+ ⭐</option>
+                        <option value="4">4.0+ ⭐</option>
+                        <option value="3.5">3.5+ ⭐</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                    <i class="bi bi-x-circle me-2"></i>ล้างตัวกรอง
+                </button>
+            </div>
+        </div>
+
+        <!-- Course List -->
+        <div class="col-lg-9">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">
+                        @if (!string.IsNullOrEmpty(_filter.Category))
+                        {
+                            @_filter.Category
+                        }
+                        else
+                        {
+                            <text>คอร์สทั้งหมด</text>
+                        }
+                    </h2>
+                    <p class="text-muted mb-0">พบ @_totalCount คอร์ส</p>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <select class="form-select" style="width: auto;" value="@_filter.SortBy" @onchange="@(async (ChangeEventArgs e) => { _filter.SortBy = e.Value?.ToString(); _filter.PageNumber = 1; await LoadCourses(); })">
+                        <option value="newest">ใหม่ล่าสุด</option>
+                        <option value="popular">ยอดนิยม</option>
+                        <option value="rating">คะแนนสูงสุด</option>
+                        <option value="price-low">ราคาต่ำ-สูง</option>
+                        <option value="price-high">ราคาสูง-ต่ำ</option>
+                    </select>
+                </div>
+            </div>
+
+            @if (_isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (!_courses.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3">ไม่พบคอร์ส</h4>
+                    <p class="text-muted">ลองเปลี่ยนตัวกรองหรือค้นหาใหม่</p>
+                    <button class="btn btn-primary" @onclick="ClearFilters">ดูคอร์สทั้งหมด</button>
+                </div>
+            }
+            else
+            {
+                <div class="row g-4">
+                    @foreach (var course in _courses)
+                    {
+                        <div class="col-md-6 col-xl-4">
+                            <CourseCard Course="course" />
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination -->
+                @if (_totalPages > 1)
+                {
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(_filter.PageNumber <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(_filter.PageNumber - 1)" aria-label="Previous page">
+                                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                                </button>
+                            </li>
+                            @for (int i = 1; i <= _totalPages; i++)
+                            {
+                                var pageNum = i;
+                                <li class="page-item @(pageNum == _filter.PageNumber ? "active" : "")">
+                                        <button class="page-link" @onclick="() => GoToPage(pageNum)" aria-current="@(pageNum == _filter.PageNumber ? "page" : null)">@pageNum</button>
+                                    </li>
+                            }
+                            <li class="page-item @(_filter.PageNumber >= _totalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(_filter.PageNumber + 1)" aria-label="Next page">
+                                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? CategoryFilter { get; set; }
+
+    private List<CourseDto> _courses = new();
+    private List<string> _categories = new();
+    private CourseFilterDto _filter = new() { PageSize = 9 };
+    private bool _isLoading = true;
+    private int _totalCount;
+    private int _totalPages;
+    private double _minRating;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CourseApi.GetCategoriesAsync();
+
+        if (!string.IsNullOrEmpty(CategoryFilter))
+        {
+            _filter.Category = CategoryFilter;
+        }
+
+        await LoadCourses();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(CategoryFilter) && CategoryFilter != _filter.Category)
+        {
+            _filter.Category = CategoryFilter;
+            _filter.PageNumber = 1;
+            await LoadCourses();
+        }
+    }
+
+    private async Task LoadCourses()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        var result = await CourseApi.GetCoursesAsync(_filter);
+        if (result != null)
+        {
+            _courses = result.Items;
+            _totalCount = result.TotalCount;
+            _totalPages = result.TotalPages;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task SearchCourses()
+    {
+        _filter.PageNumber = 1;
+        await LoadCourses();
+    }
+
+    private async Task SetPriceFilter(bool? isFree)
+    {
+        _filter.IsFree = isFree;
+        _filter.PageNumber = 1;
+        await LoadCourses();
+    }
+
+    private async Task OnRatingChange()
+    {
+        _filter.MinRating = _minRating > 0 ? _minRating : null;
+        _filter.PageNumber = 1;
+        await LoadCourses();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= _totalPages)
+        {
+            _filter.PageNumber = page;
+            await LoadCourses();
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        _filter = new CourseFilterDto { PageSize = 9 };
+        _minRating = 0;
+        await LoadCourses();
+    }
+}

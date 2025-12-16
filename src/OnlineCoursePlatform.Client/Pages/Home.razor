@@ -1,0 +1,189 @@
+﻿@page "/"
+@using OnlineCoursePlatform.Client.Components
+@using OnlineCoursePlatform.Client.Services
+@using OnlineCoursePlatform.Shared.DTOs
+@inject ICourseApiService CourseApi
+@inject NavigationManager Navigation
+
+<PageTitle>Online Course Platform - หน้าแรก</PageTitle>
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">เรียนรู้สิ่งใหม่<br />ได้ทุกที่ทุกเวลา</h1>
+                <p class="lead mb-4">
+                    แพลตฟอร์มคอร์สออนไลน์ที่ดีที่สุด เรียนรู้จากผู้เชี่ยวชาญ<br />
+                    พัฒนาทักษะใหม่ๆ เพื่ออนาคตที่ดีกว่า
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="/courses" class="btn btn-light btn-lg px-4">
+                        <i class="bi bi-search me-2"></i>สำรวจคอร์ส
+                    </a>
+                    <a href="/dashboard" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-person me-2"></i>เริ่มเรียน
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block text-center">
+                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600" 
+                     alt="Learning" class="img-fluid rounded-4 shadow" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3 mb-4">
+                <h2 class="display-5 fw-bold text-primary">10,000+</h2>
+                <p class="text-muted">นักเรียน</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h2 class="display-5 fw-bold text-primary">500+</h2>
+                <p class="text-muted">คอร์สเรียน</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h2 class="display-5 fw-bold text-primary">50+</h2>
+                <p class="text-muted">ผู้สอน</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h2 class="display-5 fw-bold text-primary">98%</h2>
+                <p class="text-muted">ความพึงพอใจ</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Courses -->
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold">คอร์สแนะนำ</h2>
+                <p class="text-muted">คอร์สยอดนิยมที่คัดสรรมาเพื่อคุณ</p>
+            </div>
+            <a href="/courses" class="btn btn-outline-primary">
+                ดูทั้งหมด <i class="bi bi-arrow-right ms-2"></i>
+            </a>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var course in _featuredCourses)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <CourseCard Course="course" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">หมวดหมู่คอร์ส</h2>
+            <p class="text-muted">เลือกเรียนในหมวดหมู่ที่คุณสนใจ</p>
+        </div>
+
+        <div class="row g-4">
+            @foreach (var category in _categories)
+            {
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a href="/courses/@Uri.EscapeDataString(category.Name)" 
+                       class="text-decoration-none">
+                        <div class="card h-100 border-0 shadow-sm text-center p-4" 
+                             style="transition: transform 0.2s;">
+                            <i class="bi @category.Icon text-primary" style="font-size: 2.5rem;"></i>
+                            <h6 class="mt-3 mb-0">@category.Name</h6>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Popular Courses -->
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold">คอร์สยอดนิยม</h2>
+                <p class="text-muted">คอร์สที่มีผู้เรียนมากที่สุด</p>
+            </div>
+            <a href="/courses?sortBy=popular" class="btn btn-outline-primary">
+                ดูทั้งหมด <i class="bi bi-arrow-right ms-2"></i>
+            </a>
+        </div>
+
+        @if (!_isLoading)
+        {
+            <div class="row g-4">
+                @foreach (var course in _popularCourses)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <CourseCard Course="course" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5" style="background: var(--gradient-primary);">
+    <div class="container text-center text-white">
+        <h2 class="fw-bold mb-3">พร้อมเริ่มต้นเรียนรู้แล้วหรือยัง?</h2>
+        <p class="lead mb-4 opacity-75">เริ่มต้นเรียนฟรีวันนี้ พัฒนาทักษะของคุณไปอีกขั้น</p>
+        <a href="/courses" class="btn btn-light btn-lg px-5">
+            <i class="bi bi-rocket-takeoff me-2"></i>เริ่มเรียนเลย
+        </a>
+    </div>
+</section>
+
+@code {
+    private List<CourseDto> _featuredCourses = new();
+    private List<CourseDto> _popularCourses = new();
+    private bool _isLoading = true;
+
+    private readonly List<(string Name, string Icon)> _categories = new()
+    {
+        ("Web Development", "bi-code-slash"),
+        ("Data Science", "bi-graph-up"),
+        ("Mobile Development", "bi-phone"),
+        ("Cloud Computing", "bi-cloud"),
+        ("Design", "bi-palette"),
+        ("Development Tools", "bi-tools")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+
+        var featuredTask = CourseApi.GetFeaturedCoursesAsync(6);
+        var popularTask = CourseApi.GetPopularCoursesAsync(6);
+
+        await Task.WhenAll(featuredTask, popularTask);
+
+        _featuredCourses = await featuredTask;
+        _popularCourses = await popularTask;
+
+        _isLoading = false;
+    }
+}

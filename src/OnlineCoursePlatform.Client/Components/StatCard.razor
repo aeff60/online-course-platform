@@ -1,0 +1,21 @@
+<div class="stat-card">
+    <div class="stat-icon @IconClass">
+        <i class="bi @Icon"></i>
+    </div>
+    <div class="stat-number">@Value</div>
+    <div class="stat-label">@Label</div>
+</div>
+
+@code {
+    [Parameter]
+    public string Value { get; set; } = "0";
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Icon { get; set; } = "bi-graph-up";
+
+    [Parameter]
+    public string IconClass { get; set; } = "primary";
+}

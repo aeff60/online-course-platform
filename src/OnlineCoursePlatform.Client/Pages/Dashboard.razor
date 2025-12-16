@@ -1,0 +1,232 @@
+@page "/dashboard"
+@using OnlineCoursePlatform.Client.Components
+@using OnlineCoursePlatform.Client.Services
+@using OnlineCoursePlatform.Shared.DTOs
+@inject IEnrollmentApiService EnrollmentApi
+@inject NavigationManager Navigation
+
+<PageTitle>แดชบอร์ด - Online Course Platform</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold">แดชบอร์ดของฉัน</h1>
+            <p class="text-muted mb-0">ยินดีต้อนรับกลับมา! ติดตามความก้าวหน้าของคุณ</p>
+        </div>
+        <a href="/courses" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>ค้นหาคอร์สใหม่
+        </a>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_stats != null)
+    {
+        <!-- Stats Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6 col-lg-3">
+                <StatCard Value="@_stats.EnrolledCourses.ToString()" 
+                         Label="คอร์สที่ลงทะเบียน" 
+                         Icon="bi-book" 
+                         IconClass="primary" />
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <StatCard Value="@_stats.InProgressCourses.ToString()" 
+                         Label="กำลังเรียน" 
+                         Icon="bi-play-circle" 
+                         IconClass="warning" />
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <StatCard Value="@_stats.CompletedCourses.ToString()" 
+                         Label="เรียนจบแล้ว" 
+                         Icon="bi-check-circle" 
+                         IconClass="success" />
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <StatCard Value="@_stats.Certificates.ToString()" 
+                         Label="ใบประกาศนียบัตร" 
+                         Icon="bi-award" 
+                         IconClass="primary" />
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Continue Learning -->
+            <div class="col-lg-8 mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-play-circle me-2 text-primary"></i>เรียนต่อ
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (_stats.ContinueLearning.Any())
+                        {
+                            @foreach (var enrollment in _stats.ContinueLearning)
+                            {
+                                <EnrollmentCard Enrollment="enrollment" 
+                                               OnContinue="ContinueLearning"
+                                               OnClick="ViewCourse" />
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-book text-muted" style="font-size: 3rem;"></i>
+                                <p class="text-muted mt-2">คุณยังไม่ได้ลงทะเบียนคอร์สใดๆ</p>
+                                <a href="/courses" class="btn btn-primary">
+                                    <i class="bi bi-search me-2"></i>ค้นหาคอร์ส
+                                </a>
+                            </div>
+                        }
+                    </div>
+                    @if (_stats.ContinueLearning.Any())
+                    {
+                        <div class="card-footer bg-white border-0 text-center">
+                            <a href="/my-courses" class="btn btn-outline-primary btn-sm">
+                                ดูคอร์สทั้งหมดของฉัน <i class="bi bi-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="col-lg-4 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-clock-history me-2 text-primary"></i>กิจกรรมล่าสุด
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (_stats.RecentActivities.Any())
+                        {
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var activity in _stats.RecentActivities.Take(5))
+                                {
+                                    <li class="d-flex mb-3">
+                                        <div class="me-3">
+                                            <span class="badge rounded-pill @GetActivityBadgeClass(activity.Type) p-2">
+                                                <i class="bi @GetActivityIcon(activity.Type)"></i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold small">@activity.Title</div>
+                                            <small class="text-muted">@activity.Description</small>
+                                            <div class="text-muted" style="font-size: 0.75rem;">
+                                                @FormatTimestamp(activity.Timestamp)
+                                            </div>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <div class="text-center py-3">
+                                <i class="bi bi-calendar-x text-muted" style="font-size: 2rem;"></i>
+                                <p class="text-muted mt-2 mb-0 small">ยังไม่มีกิจกรรม</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Stats -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-graph-up me-2 text-primary"></i>สถิติการเรียน
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <h3 class="fw-bold text-primary">@_stats.TotalLearningHours.ToString("0.0")</h3>
+                                <small class="text-muted">ชั่วโมงที่เรียน</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <h3 class="fw-bold text-success">@_stats.TotalLessonsCompleted</h3>
+                                <small class="text-muted">บทเรียนที่เรียนจบ</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <h3 class="fw-bold text-warning">@_stats.AverageProgress.ToString("0")%</h3>
+                                <small class="text-muted">ความคืบหน้าเฉลี่ย</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DashboardStatsDto? _stats;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        _stats = await EnrollmentApi.GetDashboardStatsAsync();
+        _isLoading = false;
+    }
+
+    private void ContinueLearning(EnrollmentDto enrollment)
+    {
+        Navigation.NavigateTo($"/learn/{enrollment.CourseId}");
+    }
+
+    private void ViewCourse(EnrollmentDto enrollment)
+    {
+        Navigation.NavigateTo($"/courses/{enrollment.CourseId}");
+    }
+
+    private string GetActivityBadgeClass(string type)
+    {
+        return type switch
+        {
+            "enrolled" => "bg-primary",
+            "completed_lesson" => "bg-success",
+            "completed_course" => "bg-warning",
+            "earned_certificate" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetActivityIcon(string type)
+    {
+        return type switch
+        {
+            "enrolled" => "bi-plus-circle",
+            "completed_lesson" => "bi-check",
+            "completed_course" => "bi-trophy",
+            "earned_certificate" => "bi-award",
+            _ => "bi-circle"
+        };
+    }
+
+    private string FormatTimestamp(DateTime timestamp)
+    {
+        var diff = DateTime.UtcNow - timestamp;
+
+        if (diff.TotalMinutes < 60)
+            return $"{(int)diff.TotalMinutes} นาทีที่แล้ว";
+        if (diff.TotalHours < 24)
+            return $"{(int)diff.TotalHours} ชั่วโมงที่แล้ว";
+        if (diff.TotalDays < 7)
+            return $"{(int)diff.TotalDays} วันที่แล้ว";
+
+        return timestamp.ToString("dd MMM yyyy");
+    }
+}

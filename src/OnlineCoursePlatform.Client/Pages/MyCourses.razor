@@ -1,0 +1,120 @@
+@page "/my-courses"
+@using OnlineCoursePlatform.Client.Components
+@using OnlineCoursePlatform.Client.Services
+@using OnlineCoursePlatform.Shared.DTOs
+@inject IEnrollmentApiService EnrollmentApi
+@inject NavigationManager Navigation
+
+<PageTitle>คอร์สของฉัน - Online Course Platform</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold">คอร์สของฉัน</h1>
+            <p class="text-muted mb-0">จัดการและติดตามคอร์สที่คุณลงทะเบียน</p>
+        </div>
+        <a href="/courses" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>ค้นหาคอร์สใหม่
+        </a>
+    </div>
+
+    <!-- Filter Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <button class="nav-link @(_activeTab == "all" ? "active" : "")" @onclick='() => SetTab("all")'>
+                ทั้งหมด (@_enrollments.Count)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeTab == "active" ? "active" : "")" @onclick='() => SetTab("active")'>
+                <i class="bi bi-play-circle me-1"></i>กำลังเรียน (@_enrollments.Count(e => e.Status == "Active"))
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeTab == "completed" ? "active" : "")" @onclick='() => SetTab("completed")'>
+                <i class="bi bi-check-circle me-1"></i>เรียนจบแล้ว (@_enrollments.Count(e => e.Status == "Completed"))
+            </button>
+        </li>
+    </ul>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!FilteredEnrollments.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-book text-muted" style="font-size: 4rem;"></i>
+            <h4 class="mt-3">ไม่พบคอร์ส</h4>
+            <p class="text-muted">
+                @if (_activeTab == "all")
+                {
+                    <text>คุณยังไม่ได้ลงทะเบียนคอร์สใดๆ</text>
+                }
+                else if (_activeTab == "active")
+                {
+                    <text>คุณไม่มีคอร์สที่กำลังเรียนอยู่</text>
+                }
+                else
+                {
+                    <text>คุณยังไม่มีคอร์สที่เรียนจบ</text>
+                }
+            </p>
+            <a href="/courses" class="btn btn-primary">
+                <i class="bi bi-search me-2"></i>ค้นหาคอร์ส
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var enrollment in FilteredEnrollments)
+            {
+                <div class="col-12 mb-3">
+                    <EnrollmentCard Enrollment="enrollment" 
+                                   OnContinue="ContinueLearning"
+                                   OnClick="ViewCourse" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<EnrollmentDto> _enrollments = new();
+    private bool _isLoading = true;
+    private string _activeTab = "all";
+
+    private IEnumerable<EnrollmentDto> FilteredEnrollments => _activeTab switch
+    {
+        "active" => _enrollments.Where(e => e.Status == "Active"),
+        "completed" => _enrollments.Where(e => e.Status == "Completed"),
+        _ => _enrollments
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        _enrollments = await EnrollmentApi.GetMyEnrollmentsAsync();
+        _isLoading = false;
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+    }
+
+    private void ContinueLearning(EnrollmentDto enrollment)
+    {
+        Navigation.NavigateTo($"/learn/{enrollment.CourseId}");
+    }
+
+    private void ViewCourse(EnrollmentDto enrollment)
+    {
+        Navigation.NavigateTo($"/courses/{enrollment.CourseId}");
+    }
+}
